@@ -13,14 +13,17 @@ from oauth2client.service_account import ServiceAccountCredentials
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('../raspicam-c1df1d17a617.json',scope)
-client = gspread.authorize(creds)
+#if the connection is opened here it has to stay open through out the lifescyle of the 
+#script, if this writes every minute the it should be fine 
+#but when run every hour the connection timed out
+#client = gspread.authorize(creds)
+#sheet = client.open('RaspiCamData').sheet1
 
-sheet = client.open('RaspiCamData').sheet1
 #Before going into the while loop stamp the current hour
-lastWrote = dt.datetime.now().hour
+lastWrote = dt.datetime.now().minute
 while True:
   #Compare to current hour and if now another hour write
-  if lastWrote != dt.datetime.now().hour:
+  if lastWrote != dt.datetime.now().minute:
     hInternal, tInternal = Adafruit_DHT.read(11,24)
     hExternal, tExternal = Adafruit_DHT.read(11,27)
     if hInternal is None or tInternal is None or hExternal is None or tExternal is None:
@@ -29,6 +32,9 @@ while True:
     timestamp = dt.datetime.now().isoformat()
     rowInternal = ['Internal',timestamp,tInternal,hInternal]
     rowExternal = ['External',timestamp,tExternal,hExternal]
+    #As per line 16, the connection was moved here
+    client = gspread.authorize(creds)
+    sheet = client.open('RaspiCamData').sheet1
     try: 
       sheet.insert_row(rowInternal,2)
       sheet.insert_row(rowExternal,2)
@@ -36,4 +42,6 @@ while True:
       time.sleep(2)
       continue
     #push current hour after write
-    lastWrote = dt.datetime.now().hour  
+    lastWrote = dt.datetime.now().minute
+
+##This did not quite work out as planned and I abandoned it. Now on to dht11.bg.py
